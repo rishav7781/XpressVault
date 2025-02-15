@@ -6,8 +6,8 @@ const router= express.Router();
 
 
 
-router.get('/test',(req,res)=>{
-    res.send('User Test route')
+router.get('/register',(req,res)=>{
+    res.render('register')
 })
 
 
