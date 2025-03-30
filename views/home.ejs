@@ -25,7 +25,7 @@
           </button>
 
           <!-- File Upload Form -->
-          <form action="/upload-file" method="post" enctype="multipart/form-data">
+          <form id="uploadForm">
             <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
               <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg class="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
@@ -34,7 +34,6 @@
                 <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
                   <span class="font-semibold">Click to upload</span> or drag and drop
                 </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG, or GIF (MAX. 800x400px)</p>
               </div>
               <input id="dropzone-file" type="file" class="hidden" name="file"/>
             </label>
@@ -44,6 +43,10 @@
               Upload File
             </button>
           </form>
+
+          <!-- Upload Status -->
+          <p id="message" class="text-green-500 mt-2"></p>
+
         </div>
       </div>
     </main>
@@ -71,6 +74,38 @@
           popup.classList.add("hidden");
         }
       });
+
+      // File Upload Logic
+      document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const fileInput = document.getElementById("dropzone-file");
+          if (!fileInput.files.length) {
+              alert("Please select a file!");
+              return;
+          }
+
+          const formData = new FormData();
+          formData.append("file", fileInput.files[0]);
+
+          try {
+              const response = await fetch("/storage/upload", {
+                  method: "POST",
+                  body: formData
+              });
+
+              const result = await response.json();
+              if (result.success) {
+                  document.getElementById("message").innerText = `File Uploaded! URL: ${result.fileUrl}`;
+              } else {
+                  alert("Upload failed: " + result.message);
+              }
+          } catch (error) {
+              console.error("Error:", error);
+              alert("Something went wrong!");
+          }
+      });
     </script>
   </body>
 </html>
+<!-- End of File Upload Popup -->

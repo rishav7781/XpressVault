@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center h-screen bg-gray-100">
+
+    <div class="bg-white p-6 rounded-lg shadow-md w-96">
+        <h2 class="text-xl font-bold mb-4">Upload a File</h2>
+        
+        <form id="uploadForm" enctype="multipart/form-data" class="space-y-4">
+            <input type="file" id="fileInput" name="file" required class="border p-2 w-full">
+            <button type="submit" class="bg-blue-500 text-white p-2 w-full rounded">Upload</button>
+        </form>
+
+        <p id="message" class="text-green-500 mt-2"></p>
+    </div>
+
+    <script>
+    document.getElementById("uploadForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const fileInput = document.getElementById("fileInput");
+        if (!fileInput.files.length) {
+            alert("Please select a file!");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        try {
+            const response = await fetch("/storage/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById("message").innerText = `File Uploaded! URL: ${result.fileUrl}`;
+            } else {
+                alert("Upload failed: " + result.message);
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Something went wrong!");
+        }
+    });
+    </script>
+
+</body>
+</html>
