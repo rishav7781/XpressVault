@@ -1,38 +1,24 @@
 const express = require("express");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
-const bcrypt = require("bcrypt"); // Import bcrypt for password hashing
-const User = require('../models/user.model')// Corrected model path
-const userModel = require('../models/user.model')// Corrected model path
+const bcrypt = require("bcrypt");
+const User = require('../models/user.model');
 const jwt = require("jsonwebtoken");
 
-
-// Render registration page (if using EJS or another template engine)
+// Render register page
 router.get("/register", (req, res) => {
     res.render("register");
 });
 
-// Registration route with validation
+// Register route
 router.post(
     "/register",
     [
-        body("email")
-        .trim()
-        .isEmail()
-        .withMessage("Invalid email format"),
-
-        body("username")
-            .trim()
-            .isLength({ min: 5 })
-            .withMessage("Username must be at least 5 characters long"),
-
-        body("password")
-            .trim()
-            .isLength({ min: 5 })
-            .withMessage("Password must be at least 5 characters long"),
+        body("email").trim().isEmail().withMessage("Invalid email"),
+        body("username").trim().isLength({ min: 5 }).withMessage("Username must be at least 5 characters"),
+        body("password").trim().isLength({ min: 5 }).withMessage("Password must be at least 5 characters"),
     ],
     async (req, res) => {
-        console.log("Received Data:", req.body);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -41,50 +27,39 @@ router.post(
         try {
             const { email, password, username } = req.body;
 
-            // Check if user already exists
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ message: "User already exists" });
             }
 
-            // Hash password before saving
-            const saltRounds = 10;
-            const hashedPassword = await bcrypt.hash(password, saltRounds);
+            const hashedPassword = await bcrypt.hash(password, 10);
 
-            // Create and save new user
             const newUser = await User.create({
                 email,
                 username,
-                password: hashedPassword, // Store hashed password
+                password: hashedPassword,
             });
 
-            res.status(201).json({ message: "User registered successfully", user: newUser });
+            res.status(201).json({ message: "User registered", user: newUser });
         } catch (err) {
-            console.error(err);
             res.status(500).json({ message: "Server error" });
         }
     }
 );
 
+// Render login page
 router.get("/login", (req, res) => {
     res.render("login");
 });
 
+// Login route
 router.post(
     "/login",
     [
-        body("username")
-            .trim()
-            .isLength({ min: 5 })
-            .withMessage("Username must be at least 5 characters long"), // Corrected typo in function name
-
-        body("password")
-            .trim()
-            .isLength({ min: 5 })
-            .withMessage("Password must be at least 5 characters long"),
+        body("username").trim().isLength({ min: 5 }).withMessage("Username too short"),
+        body("password").trim().isLength({ min: 5 }).withMessage("Password too short"),
     ],
     async (req, res) => {
-        console.log("Received Data:", req.body);
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -93,33 +68,37 @@ router.post(
         try {
             const { username, password } = req.body;
 
-            // Check if user exists
-            const existingUser = await userModel.findOne({ username:username });
-            if (!existingUser) {
+            const user = await User.findOne({ username });
+            if (!user) {
                 return res.status(400).json({ message: "Username or password incorrect" });
             }
 
-            // Compare passwords
-            const isPasswordMatch = await bcrypt.compare(password, existingUser.password);
-            if (!isPasswordMatch) {
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
                 return res.status(400).json({ message: "Invalid credentials" });
             }
 
-          //  res.status(200).json({ message: "User logged in successfully" });
+            const payload = {
+                userId: user._id.toString(),
+                email: user.email,
+                username: user.username,
+            };
 
-            // Generate JWT token
-            const token=jwt.sign({
-                UserId:User._id,
-                email:User.email,
-                username:User.username
+            const token = jwt.sign(payload, process.env.JWT_SECRET, {
+                expiresIn: "1h",
+            });
 
-            },process.env.JWT_SECRET)
-            res.cookie("token",token)
-            res.send("User logged in successfully")
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax"
+            });
+
+            res.send("User logged in successfully");
         } catch (err) {
-            console.error(err);
             res.status(500).json({ message: "Server error" });
         }
     }
 );
+
 module.exports = router;
